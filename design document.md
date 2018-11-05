@@ -69,4 +69,29 @@ java
 
   原理：发送方感知网络行为0.0
 
-  - 
+
+
+
+
+
+
+
+传输的编码问题
+
+f.read(mss)读出来的是类型为bytes的字节类型，是单纯的二进制流，输出显示的时候用16进制来表示。
+
+int转bytes：byte([int])
+
+bytes转int：ord(bytes([data[0]]))
+
+
+
+通过二进制流文件头标识得到文件类型
+
+
+
+rdt1.0 分片、传输、存入二进制文件，将二进制文件转换为格式文件。
+
+rdt2.0 bit error checksum，ACK，重传
+
+rdt2.1 分组序号ACK0/1
