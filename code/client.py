@@ -38,6 +38,7 @@ while commandLine != "q":
 	elif command[1] == "lget":
 		file = command[3]
 		url = command[2]
-		print("Commanding : download file ", file, " to ", url)
+		print("Commanding : download file ", file, " from ", url)
 
+		DownloadFile(file, url)
 	commandLine = input("enter command, 'q' to quit : ")
