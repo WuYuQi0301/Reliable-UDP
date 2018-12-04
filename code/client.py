@@ -1,23 +1,43 @@
-# path python3
+# client.py
 # 
+# 
+# LFTP lsend 127.0.0.1 ../testData/saveVideo.avi
 import socket
 import random
+import struct
+import os
+from packet import initPacket
+from Upload import UploadFile
 
-s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-f = open('../testdata/saveVideo.avi', mode='rb')
-# seq = random.randint(1,100)
-seq = 1
-print("seq "+ str(seq))
-mss = 1024 - 2 #读取字节数
 
-for i in range(1):
-    data = f.read(mss)
-    test = bytes([seq]) + bytes([0]) + data
-    s.sendto(test, ('127.0.0.1',9999))
-    reply = s.recvfrom(1024)          #字节数
-    print(reply)
-    seq = seq + 1
+commandLine = 0
+commandLine = input("enter command, 'q' to quit : ")
 
-f.close()
+while commandLine != "q":
+	command = commandLine.split()
 
-s.close()
+	#命令格式错误
+	if len(command) != 4 or command[0] != "LFTP" or (command[1]!="lsend" and command[1]!="lget"):
+		print("command format error")
+		commandLine = input("enter command, 'q' to quit : ")
+		continue
+
+	#上传文件
+	if command[1] == "lsend":
+		if os.path.exists(command[3]) == False:
+			print("File does not exists")
+			continue
+
+		file = command[3]
+		url = command[2]
+		print("Commanding : upload file ", file, " to ", url)
+
+		UploadFile(file, url)
+
+	#下载文件
+	elif command[1] == "lget":
+		file = command[3]
+		url = command[2]
+		print("Commanding : download file ", file, " to ", url)
+
+	commandLine = input("enter command, 'q' to quit : ")
