@@ -1,10 +1,10 @@
-设计文档
+<center><font size = 6>计算机网络期中项目</font></center>
 
-语言
+<center>姓名：吴宇祺     学号：16340242      专业及方向：软件工程（数字媒体）</center>
 
-python
+[TOC]
 
-需求
+### 需求
 
 1. 支持大文件传输，例如1G的电影
 2. 包括客户端和服务端，遵从命令格式
@@ -15,98 +15,35 @@ python
 7. 服务端并发访问控制
 8. 提供有效查错信息
 
-实现思路
-
-- 服务端
-  1. 在某IP某端口alway-on
-- 客户端
-  2. 对服务端发起上传、下载请求
-
-功能：上传和下载，无损坏无间隔费冗余按序
-
-先仅考虑上传功能：视频从客户端到服务端
-
-基础设施：
-
-- 基础设施：sender处理的主要事件
-
-  - 接受到传输命令
-
-    从文件系统读取文件数据，大文件->字节流->加上TCP有关头部（序号和确认号）并封装分组，估计往返时间，维护计时器；
-
-  - 超时
-
-    重传并重启定时器；
-
-  - 接收到有效ACK字段值的报文段
-
-    比较ACK携带的值y和SendBase
-
-    ​	若y>SendBase，更新SendBase=y（则该ACK是在确认一个或多个先前未确认的报文段）；若当前仍有未被确认的报文段，重启定时器；
-
-    ​	否则，递增ACK counter for y；若counter为3，重传报文段y   //快速重传
-
-  - 超时间隔加倍
-
-  - 回退N步还是选择重传
-
-- 基础设施：receiver处理的主要事件
-
-  - 维护一个接收buffer
-  - 将数据段拆出放入buffer，若没有问题，将相关字节流接入文件系统；(buffer满/按序) 时将数据append到文件后
-
-- 流控制
-
-  - 下载时，server即sender；
-  - 发送方跟踪两个变量并保证
-  - 当接收到rwnd = 0，继续发送只有一个字节的分组，直到收到>0
-
-- 堵塞控制
-
-  原理：发送方感知网络行为0.0
 
 
+## 设计文档
 
+### 一、实验环境及文件结构
 
+操作系统：Window 7           编程语言：python             版本 ：3.7
 
+文件结构：
 
+- 
 
+### 二、UDP协议和客户端和服务端架构
 
-传输的编码问题
+1. 客户端
 
-f.read(mss)读出来的是类型为bytes的字节类型，是单纯的二进制流，输出显示的时候用16进制来表示。
+2. 服务端
 
-int转bytes：byte([int])
+3. 命令格式：
 
-bytes转int：ord(bytes([data[0]]))
+```
+$ cd code
+$ LFTP lsend 127.0.0.1 ../testData/saveVideo.avi
+$ LFTP lget 127.0.0.1 D:/saveVideo.avi
+```
 
+### 三、命令传输和链接建立/断开：
 
-
-通过二进制流文件头标识得到文件类型
-
-
-
-rdt1.0 分片、传输、存入二进制文件，将二进制文件转换为格式文件。
-
-rdt2.0 bit error checksum，ACK，重传
-
-rdt2.1 分组序号ACK0/1
-
-
-
-- 基础设施：差错检测和灰度
-- 流控制：滑动窗口
-- 拥塞控制
-  1. 慢启动
-  2. 拥塞避免
-  3. 拥塞发生
-  4. 快速恢复
-
-
-
-命令传输和链接建立/断开：
-
-- client接收到命令之后，向server发送连接请求（握手），包括client选择的（随机）初始序列号；若
+- client接收到命令之后，向server发送连接请求（握手），包括client选择的（随机）初始序列号；
 
 - server是“总是运行”的；若server不处于运行状态，client检测到超时重发；如果请求超时5次，向控制台返回“Server does not Response”。
 
@@ -129,54 +66,241 @@ rdt2.1 分组序号ACK0/1
 
   - 接收到断开命令，回复ack进入半连接状态，接收到客户端第二次发送的断开连接，回复ack并完全断开；
 
-图示：
+- **非阻塞接收分组**
+
+  udp的套接字接收 socket.recvfrom() 默认是阻塞式的，就是在（被动）接收分组之前程序都不会从recvfrom函数返回；这样效率低下也无法实现流水线传输。用函数socket.setblocking(0)设置为非阻塞式的。非阻塞的recvfrom没有接收到分组就要函数返回时会抛出异常，需要进行异常处理。基本代码：
+
+  ```python
+  while True:
+      try :
+  		reply, addr = s.recvfrom(receiveSize) 
+  		break
+  	except BlockingIOError:
+  		pass
+  ```
+
+
+例如上传文件：
+
+客户端：
+
+```python
+	# Client: Upload.py
+    # set up connection：
+	while True:
+		command = 1  #上传命令
+		print("sending command ", command ," and initial seqNum ", InitialSeqNum)
+		if Timer == TTL:                               #发送命令和初始序列号
+			s.sendto(struct.pack(commandformat, command, InitialSeqNum), (dstIP, dstPort))
+			Timer = 0
+			TTL *= 2                                 #超时TTL加倍
+		Timer += 1 
+		try :
+			print(receiveSize)
+			reply, addr = s.recvfrom(receiveSize)       #接收服务端对请求连接的去人和分配缓存大小
+			RcvBuffer, seq = struct.unpack(commandformat, reply)
+			print("command pkt ack recieved")
+		
+			Timer = 3
+			while True:
+				if Timer == TTL:
+					print("sending file info")
+					fileInfo = bytes(filePath.encode('utf-8')) + bytes(fileName.encode('utf-8')) + bytes(("."+fileFormat).encode('utf-8'))
+					s.sendto(fileInfo, (dstIP, dstPort))  #发送将要上传的文件信息
+				Timer += 1
+				try :
+					reply, addr = s.recvfrom(receiveSize) #接收ack，开始文件数据传输
+					print("server : fileInfo recieved ( connection setup")
+					break
+				except BlockingIOError:
+					pass
+			break
+		except BlockingIOError:
+			pass
+
+```
+
+服务端建立连接：主函数监听到连接请求之后分析命令，进入replyUpload函数处理上传请求或者进入replyDownload处理下载请求
+
+```python
+#Server main
+# 服务端打开socket接受连接请求
+s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+s.bind(('127.0.0.1', 9999))
+print('Bing UDP on 9999')
+
+#监听连接请求
+text, addr = s.recvfrom(struct.calcsize(commandformat))
+command, expSeqNum = struct.unpack(commandformat, text)
+print("Received command from ", addr, " command : ", command, " expSeq : ", expSeqNum)
+
+if command == 1:   # 上传命令
+
+	replyUpload(s, expSeqNum, addr)
+
+
+elif command == 0: # 下载命令
+	RcvBuffer = expSeqNum
+	replyDownload(s, RcvBuffer, addr)
+
+s.close()
+# Server replyDownload
+	RcvBufferSize = 20 # 分配buffer数量
+	s.sendto(struct.pack(commandformat, RcvBufferSize, expSeqNum), addr)
+
+	# 接收文件信息
+	fileInfo, addr = s.recvfrom(1024)
+	f = open(str(fileInfo, encoding = 'utf-8'), mode='wb')
+	print("file info : ", fileInfo)
+	s.sendto(struct.pack(commandformat, RcvBufferSize, expSeqNum), addr)
+```
 
 
 
-差错检测和恢复设计：
+### 四、差错检测和恢复设计：
 
-发送方：
+**发送方**：
 
 1. GBN：累计确认
-2. 超时间隔加倍
-3. 快速重传
 
-接收方：
+   ```python
+   #Client Upload：
+   # event: 接收到ACK
+   	if Sendbase <= ackSeq:        # 累计确认，之前的都是正确确认收到的	
+   		Sendbase = ackSeq + mss
+           
+   		while len(Window) != 0:
+   			if Window[0].seqNum < Sendbase:
+   				del Window[0]
+   			else: break
+                   
+   		if Sendbase != NextSeqNum:  #如果当前还有已发送但未被确认的分组: reset timer
+   			Timer = 0;
+   ```
+
+2. 超时间隔加倍
+
+   ```python
+   	# Client: Upload.py
+       # set up connection：
+   	while True:
+   		command = 1  #上传命令
+   		print("sending command ", command ," and initial seqNum ", InitialSeqNum)
+   		if Timer == TTL:                               #发送命令和初始序列号
+   			s.sendto(struct.pack(commandformat, command, InitialSeqNum), (dstIP, dstPort))
+   			Timer = 0
+   			TTL *= 2                                 #超时TTL加倍
+   		Timer += 1 
+   ```
+
+3. 快速重传（见拥塞控制）
+
+**接收方**：
 
 1. 确认最后一个按序到达的分组的序列号
+2. 使用优先队列，按序列号从小到大缓存失序到达的分组
 
-2. 缓存失序到达的分组
+```python
+# Server replyUpload()
+
+#初始化：
+	ReceiveBuffer = PriorityQueue(RcvBufferSize) # 按缓存的seqNum从小到大排列
+	bufferedSeq = []
+	rwnd = RcvBufferSize            # 缓存可用空间
+
+# event :接收到新分组
+	seq, ack, w = struct.unpack(format, data);
+
+	if seq < expSeqNum:    # 丢弃冗余分组
+		logf.write("redundant pkt："+ str(seq)+ "\n")
+		continue
+	elif seq > expSeqNum:  # 若缓存仍有空间，缓存乱序到达的pkt
+		if not ReceiveBuffer.full() and seq not in bufferedSeq:
+			logf.write("put buffer : " + str(seq)+ "\n")
+			ReceiveBuffer.put(initPacket(seq, w))
+			bufferedSeq.append(seq)
+			rwnd -= 1
+            
+   	else :	               #seq == expSeqNum:
+		ackSeq = seq
+		f.write(w)
+		expSeqNum += len(w)
+
+		#检查buffer中有无 顺序可写的数据包
+		if not ReceiveBuffer.empty():       # buffer不为空
+			tmp = ReceiveBuffer.get()       # 取队头元素
+			bufferedSeq.remove(tmp.seqNum)
+            
+			while tmp.seqNum <= expSeqNum:
+				if tmp.seqNum < expSeqNum:    # 若队列中有小于expNum的缓存（冗余），丢弃
+					if ReceiveBuffer.empty():
+						break
+					tmp = ReceiveBuffer.get()
+					bufferedSeq.remove(tmp.seqNum)
+				
+                elif expSeqNum == tmp.seqNum: # 确认, 移出缓冲并写入磁盘
+					ackSeq = tmp.seqNum
+					f.write(w)
+					expSeqNum += len(tmp.data)
+						if ReceiveBuffer.empty():
+							break
+					tmp = ReceiveBuffer.get()
+					bufferedSeq.remove(tmp.seqNum)
+				
+                if expSeqNum < tmp.seqNum:
+					ReceiveBuffer.put(tmp)
+			
+            bufferedSeq.append(tmp.seqNum)
+			rwnd = RcvBufferSize - ReceiveBuffer.qsize()
+
+			# 发送ack				
+			ackPkt = struct.pack(ackformat, ackSeq, rwnd)
+			s.sendto(ackPkt, addr)
+
+```
 
 
-发送方伪代码：
-
-接收方伪代码：
 
 
 
-流控制机制：
+### 五、流控制机制：
 
 1. 建立连接握手时，接收方将RcvBuffer传输给发送方，发送方用于初始化变量rwnd
 
-​	上传：
+​	例如上传：
 
 ```python
-	RcvBuffer, seq = struct.unpack(commandformat, reply)
+	#Server：replyUpload.py
+    RcvBuffer, seq = struct.unpack(commandformat, reply)
     #...#
     rwnd = RcvBuffer    
 ```
 
-​	下载：
-
-```python
-
-```
-
-2. 发送方维护两个变量：LastByteSent和LastByteAcked；如果
+2. 发送方维护两个变量：LastByteSent和LastByteAcked并使得一下条件满足时才允许发送分组
+   $$
+   LastByteSent - LastByteAcked <= rwnd*MSS
+   $$
 
 
+   ```python
+   # Client Upload
+   	#发送分组条件：
+   	if (LastByteSent-LastByteAcked) <= rwnd*mss and (NextSeqNum-Sendbase)/mss < windowSize:
+   		#从文件二进制六中读取大小为MSS的分组
+       	s.sendto(struct.pack(format, NextSeqNum, 0, data), (dstIP, dstPort))
+   		LastByteSent = NextSeqNum - 1   #更新LastByteSent
+           
+   	elif (LastByteSent-LastByteAcked) > rwnd*mss:
+       	# logf记录 发送单个字节流控制分组 日志
+   	s	.sendto(struct.pack(flowCtlrFormat, NextSeqNum-mss, -1), (dstIP, dstPort))
+   
+       #event : 接收到分组确认后，更新 rwnd 和 LastByteAcked：
+   	ackSeq, rwnd = struct.unpack(ackformat, reply)
+   	LastByteAcked = ackSeq + mss  # 流控制中，ack seq 不变化
+   ```
 
-堵塞控制机制：
+
+### 六、堵塞控制机制：
 
 发送方维护两个变量：
 
@@ -231,27 +355,56 @@ rdt2.1 分组序号ACK0/1
 >
 > ​		state = 0
 >
-> ​		重传丢失分组（冗余ACK 的下一分组序号）
+> ​		重传丢失分组（冗余ACK 的下一分组序号）  #快速重传
+
+```python
+# Client Upload
+   	#event : ACK received, with field value of y
+	reply = 0;
+	try:
+		reply, dstAddr = s.recvfrom(receiveSize)
+		ackSeq, rwnd = struct.unpack(ackformat, reply)
+	
+		LastByteAcked = ackSeq + mss  # 流控制中，ack seq 不变化
+		if lastACK != ackSeq:
+			if State == 0:
+				cwnd += 1
+			else: 
+				cwnd += 1/cwnd			
+			dupACKcount = 0
+			lastACK = ackSeq
+		else :
+			duoACKcount += 1    
+    
+    #event : timer out / duoACKcount
+	Timer += 1
+	if Timer == TTL or dupACKcount == 3:
+		State = 0
+		ssthresh = cwnd / 2
+		cwnd = 1
+		duoACKcount = 0
+		Timer = 0
+		# if Sendbase != NextSeqNum and (LastByteSent-LastByteAcked) <= rwnd*mss: 
+		if len(Window) != 0:
+			logf.write("TIME OUT : retransmit " +str(Window[0].seqNum)+ "\n")
+			retransmit = struct.pack(format, Window[0].seqNum, 0, Window[0].data)
+			s.sendto(retransmit, (dstIP, dstPort))
+```
 
 
 
-测试差错检测：
-
-1. 分组丢失（重传）：
-
-2. 丢失ACK：
-
-3. 过早超时：
-
-   接收方处理冗余：
-
-   接收方处理缓存已满：
-
-流控制测试：
-
-1. 是否能够保证 < rwnd
-2. 接收到rwnd之后
 
 
+## 测试文档
 
-Python 线程 threading
+测试：
+
+![1](C:\Users\Yuki\Desktop\CNproject\1.JPG)
+
+上传：
+
+![2](C:\Users\Yuki\Desktop\CNproject\2.JPG)
+
+下载：
+
+![3](C:\Users\Yuki\Desktop\CNproject\3.JPG)
