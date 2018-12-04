@@ -43,6 +43,7 @@ def UploadFile(fileLocal, dstAddr):
 			TTL *= 2
 		Timer += 1 
 		try :
+			print(receiveSize)
 			reply, addr = s.recvfrom(receiveSize)
 			RcvBuffer, seq = struct.unpack(commandformat, reply)
 			print("command pkt ack recieved")

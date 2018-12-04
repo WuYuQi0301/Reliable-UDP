@@ -8,7 +8,7 @@ import struct
 import os
 from packet import initPacket
 from Upload import UploadFile
-
+from Download import DownloadFile
 
 commandLine = 0
 commandLine = input("enter command, 'q' to quit : ")
@@ -41,4 +41,5 @@ while commandLine != "q":
 		print("Commanding : download file ", file, " from ", url)
 
 		DownloadFile(file, url)
+
 	commandLine = input("enter command, 'q' to quit : ")

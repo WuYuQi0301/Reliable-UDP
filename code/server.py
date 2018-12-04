@@ -6,6 +6,8 @@ import struct
 import os
 from queue import PriorityQueue
 from packet import initPacket
+from replyUpload import replyUpload
+from replyDownload import replyDownload
 
 #一些参数
 uniSize = 1024 + 8
@@ -29,11 +31,13 @@ text, addr = s.recvfrom(struct.calcsize(commandformat))
 command, expSeqNum = struct.unpack(commandformat, text)
 print("Received command from ", addr, " command : ", command, " expSeq : ", expSeqNum)
 
-if command == 1   # 上传命令
+if command == 1:   # 上传命令
 
-	replyUpload(expSeqNum, addr)
+	replyUpload(s, expSeqNum, addr)
 
 
-elif command == 0 # 下载命令
+elif command == 0: # 下载命令
+	RcvBuffer = expSeqNum
+	replyDownload(s, RcvBuffer, addr)
 
-	replyDownload(addr)
+s.close()

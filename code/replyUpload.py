@@ -1,7 +1,21 @@
-def replyUpload(expSeqNum, addr)
+import socket
+import random
+import struct
+import os
+from packet import initPacket
+from queue import PriorityQueue
+def replyUpload(s, expSeqNum, addr):
 	# 服务端日志
 	logf = open('../log/server-log.txt', mode='w')
 	logf.write("Replying Upload ")
+	
+	uniSize = 1024 + 8
+	commandformat = '2I'
+	ackformat = '2I'
+	mss = 1024 #读取字节数
+	format = '2I1024s'
+	flowCtlrFormat = 'Ii'
+	flowCtlrLen = struct.calcsize(flowCtlrFormat)
 
 	RcvBufferSize = 20 # 分配buffer数量
 	s.sendto(struct.pack(commandformat, RcvBufferSize, expSeqNum), addr)
@@ -87,7 +101,6 @@ def replyUpload(expSeqNum, addr)
 
 	s.sendto(struct.pack(commandformat, seq+1, 2), addr)
 
-
-	s.close()
+	# s.close()
 	f.close()
 	logf.close()

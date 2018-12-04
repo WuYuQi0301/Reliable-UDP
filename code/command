@@ -1,1 +1,1 @@
-LFTP lsend 127.0.0.1 ../testData/saveVideo.avi
+LFTP lget 127.0.0.1 D:/saveVideo.avi
