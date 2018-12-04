@@ -4,6 +4,8 @@
 
 [TOC]
 
+github ： https://github.com/WuYuQi0301/Reliable-UDP
+
 ### 需求
 
 1. 支持大文件传输，例如1G的电影
@@ -282,6 +284,8 @@ s.close()
    $$
 
 
+
+
    ```python
    # Client Upload
    	#发送分组条件：
@@ -399,12 +403,12 @@ s.close()
 
 测试：
 
-![1](C:\Users\Yuki\Desktop\CNproject\1.JPG)
+![1](C:\Users\Yuki\Desktop\CNproject\pic\1.JPG)
 
 上传：
 
-![2](C:\Users\Yuki\Desktop\CNproject\2.JPG)
+![2](C:\Users\Yuki\Desktop\CNproject\pic\2.JPG)
 
 下载：
 
-![3](C:\Users\Yuki\Desktop\CNproject\3.JPG)
+![3](C:\Users\Yuki\Desktop\CNproject\pic\3.JPG)
